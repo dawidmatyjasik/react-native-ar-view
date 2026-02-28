@@ -1,10 +1,18 @@
-import { ARNavigator, ARScene, ARModel } from "react-native-ar-view";
-import type { ARSceneProps } from "react-native-ar-view";
+import {
+  ARNavigator,
+  ARModel,
+  useARNavigator,
+  useSceneProps,
+} from "react-native-ar-view";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-function MainScene({ arSceneNavigator }: ARSceneProps) {
+type SecondSceneProps = { modelScale: number; hint: string };
+
+function MainScene() {
+  const navigator = useARNavigator();
+
   return (
-    <ARScene arSceneNavigator={arSceneNavigator}>
+    <>
       <ARModel
         source={{
           uri: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb",
@@ -22,37 +30,45 @@ function MainScene({ arSceneNavigator }: ARSceneProps) {
         <Text style={styles.hint}>Tap a surface to place the model</Text>
         <TouchableOpacity
           style={styles.button}
-          onPress={() => arSceneNavigator.push({ scene: SecondScene })}
+          onPress={() =>
+            navigator.push<SecondSceneProps>({
+              scene: SecondScene,
+              passProps: {
+                modelScale: 0.3,
+                hint: "Scene 2 - Tap to place a duck",
+              },
+            })
+          }
         >
           <Text style={styles.buttonText}>Push Scene 2</Text>
         </TouchableOpacity>
       </View>
-    </ARScene>
+    </>
   );
 }
 
-function SecondScene({ arSceneNavigator }: ARSceneProps) {
+function SecondScene() {
+  const navigator = useARNavigator();
+  const { modelScale, hint } = useSceneProps<SecondSceneProps>() ?? {};
+
   return (
-    <ARScene arSceneNavigator={arSceneNavigator}>
+    <>
       <ARModel
         source={{
           uri: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/Duck/glTF-Binary/Duck.glb",
         }}
         placement="tap"
-        scale={0.3}
+        scale={modelScale}
         gestures={{ scale: true, rotate: true }}
       />
 
       <View style={styles.overlay}>
-        <Text style={styles.hint}>Scene 2 - Tap to place a duck</Text>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => arSceneNavigator.pop()}
-        >
+        <Text style={styles.hint}>{hint}</Text>
+        <TouchableOpacity style={styles.button} onPress={() => navigator.pop()}>
           <Text style={styles.buttonText}>Pop back</Text>
         </TouchableOpacity>
       </View>
-    </ARScene>
+    </>
   );
 }
 

@@ -133,13 +133,10 @@ export default function ARNavigator({
   const SceneComponent = currentScene.scene;
 
   return (
-    <ARNavigatorProvider navigator={navigator} tracking={tracking}>
+    <ARNavigatorProvider navigator={navigator} tracking={tracking} sceneProps={currentScene.passProps}>
       <NativeARView style={style} />
       <ARSceneProvider key={sceneKey} onModelsChanged={handleModelsChanged}>
-        <SceneComponent
-          arSceneNavigator={navigator}
-          passProps={currentScene.passProps}
-        />
+        <SceneComponent />
       </ARSceneProvider>
     </ARNavigatorProvider>
   );

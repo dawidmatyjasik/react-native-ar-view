@@ -23,22 +23,16 @@ export type ARModelProps = {
 
 // --- Scene types ---
 
+export type SceneConfig<T extends Record<string, unknown> = Record<string, unknown>> = {
+  scene: React.ComponentType;
+  passProps?: T;
+};
+
 export type ARSceneNavigator = {
-  push: (config: SceneConfig) => void;
+  push: <T extends Record<string, unknown> = Record<string, unknown>>(config: SceneConfig<T>) => void;
   pop: () => void;
-  replace: (config: SceneConfig) => void;
+  replace: <T extends Record<string, unknown> = Record<string, unknown>>(config: SceneConfig<T>) => void;
   popToTop: () => void;
-};
-
-export type SceneConfig = {
-  scene: React.ComponentType<ARSceneProps>;
-  passProps?: Record<string, unknown>;
-};
-
-export type ARSceneProps = {
-  arSceneNavigator: ARSceneNavigator;
-  passProps?: Record<string, unknown>;
-  children?: React.ReactNode;
 };
 
 // --- Navigator types ---
