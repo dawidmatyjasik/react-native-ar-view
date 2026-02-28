@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android", "web"],
+  "apple": {
+    "modules": ["ReactNativeArViewModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.arview.ReactNativeArViewModule"]
+  }
+}

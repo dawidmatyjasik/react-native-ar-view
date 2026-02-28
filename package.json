@@ -1,0 +1,43 @@
+{
+  "name": "react-native-ar-view",
+  "version": "0.1.0",
+  "description": "React Native Ar View",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "scripts": {
+    "build": "expo-module build",
+    "clean": "expo-module clean",
+    "lint": "expo-module lint",
+    "test": "expo-module test",
+    "prepare": "expo-module prepare",
+    "prepublishOnly": "expo-module prepublishOnly",
+    "expo-module": "expo-module",
+    "open:ios": "xed example/ios",
+    "open:android": "open -a \"Android Studio\" example/android"
+  },
+  "keywords": [
+    "react-native",
+    "expo",
+    "react-native-ar-view",
+    "ReactNativeArView"
+  ],
+  "repository": "https://github.com/dawidmatyjasik/react-native-ar-view",
+  "bugs": {
+    "url": "https://github.com/dawidmatyjasik/react-native-ar-view/issues"
+  },
+  "author": "Dawid Matyjasik <dawidspisak@gmail.com> (https://github.com/dawidmatyjasik)",
+  "license": "MIT",
+  "homepage": "https://github.com/dawidmatyjasik/react-native-ar-view#readme",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/react": "~19.1.1",
+    "expo-module-scripts": "^55.0.2",
+    "expo": "^55.0.3",
+    "react-native": "0.82.1"
+  },
+  "peerDependencies": {
+    "expo": "*",
+    "react": "*",
+    "react-native": "*"
+  }
+}
