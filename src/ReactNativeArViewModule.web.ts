@@ -3,12 +3,17 @@ import { registerWebModule, NativeModule } from 'expo';
 import { ReactNativeArViewModuleEvents } from './ReactNativeArView.types';
 
 class ReactNativeArViewModule extends NativeModule<ReactNativeArViewModuleEvents> {
-  PI = Math.PI;
-  async setValueAsync(value: string): Promise<void> {
-    this.emit('onChange', { value });
+  async pushScene(_models: Array<Record<string, unknown>>): Promise<void> {
+    console.warn('ARCore is not supported on web');
   }
-  hello() {
-    return 'Hello world! 👋';
+  async popScene(): Promise<void> {
+    console.warn('ARCore is not supported on web');
+  }
+  async replaceScene(_models: Array<Record<string, unknown>>): Promise<void> {
+    console.warn('ARCore is not supported on web');
+  }
+  async popToTop(): Promise<void> {
+    console.warn('ARCore is not supported on web');
   }
 }
 

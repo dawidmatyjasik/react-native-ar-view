@@ -1,15 +1,10 @@
 import * as React from 'react';
+import { Text, View } from 'react-native';
 
-import { ReactNativeArViewProps } from './ReactNativeArView.types';
-
-export default function ReactNativeArView(props: ReactNativeArViewProps) {
+export default function NativeARView(props: { style?: any }) {
   return (
-    <div>
-      <iframe
-        style={{ flex: 1 }}
-        src={props.url}
-        onLoad={() => props.onLoad({ nativeEvent: { url: props.url } })}
-      />
-    </div>
+    <View style={[{ justifyContent: 'center', alignItems: 'center' }, props.style]}>
+      <Text>AR is not supported on web</Text>
+    </View>
   );
 }
