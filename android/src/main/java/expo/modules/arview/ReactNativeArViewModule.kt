@@ -2,8 +2,23 @@ package expo.modules.arview
 
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
+import expo.modules.kotlin.Promise
+import android.os.Handler
+import android.os.Looper
 
 class ReactNativeArViewModule : Module() {
+    private val uiHandler = Handler(Looper.getMainLooper())
+
+    private fun runOnUi(promise: Promise, block: () -> Any?) {
+        uiHandler.post {
+            try {
+                promise.resolve(block())
+            } catch (e: Exception) {
+                promise.reject("ERR_UI_THREAD", e.message, e)
+            }
+        }
+    }
+
     override fun definition() = ModuleDefinition {
         Name("ReactNativeArView")
 
@@ -17,22 +32,22 @@ class ReactNativeArViewModule : Module() {
             "onARError"
         )
 
-        AsyncFunction("pushScene") { models: List<Map<String, Any?>> ->
+        AsyncFunction("pushScene") { models: List<Map<String, Any?>>, promise: Promise ->
             val configs = models.map { ModelConfig.fromMap(it) }
-            getView()?.pushScene(configs)
+            runOnUi(promise) { getView()?.pushScene(configs) }
         }
 
-        AsyncFunction("popScene") {
-            getView()?.popScene() ?: false
+        AsyncFunction("popScene") { promise: Promise ->
+            runOnUi(promise) { getView()?.popScene() ?: false }
         }
 
-        AsyncFunction("replaceScene") { models: List<Map<String, Any?>> ->
+        AsyncFunction("replaceScene") { models: List<Map<String, Any?>>, promise: Promise ->
             val configs = models.map { ModelConfig.fromMap(it) }
-            getView()?.replaceScene(configs)
+            runOnUi(promise) { getView()?.replaceScene(configs) }
         }
 
-        AsyncFunction("popToTop") {
-            getView()?.popToTop()
+        AsyncFunction("popToTop") { promise: Promise ->
+            runOnUi(promise) { getView()?.popToTop() }
         }
 
         View(ReactNativeArView::class) {
