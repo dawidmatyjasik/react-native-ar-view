@@ -171,6 +171,11 @@ class ReactNativeArView: ExpoView, ARSCNViewDelegate, ARSessionDelegate, UIGestu
         plane.height = CGFloat(planeAnchor.planeExtent.height)
     }
 
+    func renderer(_ renderer: SCNSceneRenderer, didRemove node: SCNNode, for anchor: ARAnchor) {
+        guard let planeAnchor = anchor as? ARPlaneAnchor else { return }
+        planeOverlayNodes.removeValue(forKey: planeAnchor as ARAnchor)
+    }
+
     private func hidePlaneOverlays() {
         for (_, planeNode) in planeOverlayNodes {
             planeNode.isHidden = true
@@ -206,11 +211,9 @@ class ReactNativeArView: ExpoView, ARSCNViewDelegate, ARSessionDelegate, UIGestu
             @unknown default:
                 reasonStr = "unknown"
             }
-            if newState != lastTrackingState {
-                lastTrackingState = newState
-                onTrackingStateChange(["state": newState, "reason": reasonStr])
-                return
-            }
+            lastTrackingState = newState
+            onTrackingStateChange(["state": newState, "reason": reasonStr])
+            return
         case .notAvailable:
             newState = "unavailable"
         }
