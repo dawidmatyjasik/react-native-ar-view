@@ -83,13 +83,6 @@ class ReactNativeArView(context: Context, appContext: AppContext) :
                     config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
                     config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
                 },
-                onSessionCreationFailed = { exception ->
-                    Log.e(TAG, "ARCore session creation failed", exception)
-                    onARError(mapOf(
-                        "code" to "SESSION_CREATION_FAILED",
-                        "message" to (exception.message ?: "ARCore session creation failed")
-                    ))
-                },
                 onSessionUpdated = { _, frame ->
                     handleFrameUpdate(frame)
                 },
@@ -114,11 +107,10 @@ class ReactNativeArView(context: Context, appContext: AppContext) :
         addView(arSceneView)
 
         arSceneView.onGestureListener = object : GestureDetector.SimpleOnGestureListener() {
-            override fun onSingleTapConfirmed(e: MotionEvent, node: Node?): Boolean {
+            override fun onSingleTapConfirmed(e: MotionEvent, node: Node?) {
                 if (node == null) {
                     handleTapToPlace(e)
                 }
-                return true
             }
         }
     }
@@ -162,7 +154,6 @@ class ReactNativeArView(context: Context, appContext: AppContext) :
                         Plane.Type.HORIZONTAL_UPWARD_FACING -> "horizontal"
                         Plane.Type.HORIZONTAL_DOWNWARD_FACING -> "horizontal"
                         Plane.Type.VERTICAL -> "vertical"
-                        else -> "horizontal"
                     }
                     onPlaneDetected(mapOf("id" to planeId, "type" to type))
                 }
