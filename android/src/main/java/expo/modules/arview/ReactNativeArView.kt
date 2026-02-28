@@ -1,30 +1,311 @@
 package expo.modules.arview
 
 import android.content.Context
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import android.util.Log
+import android.view.MotionEvent
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
+import com.google.ar.core.Config
+import com.google.ar.core.Frame
+import com.google.ar.core.Plane
+import com.google.ar.core.TrackingFailureReason
+import com.google.ar.core.TrackingState as ARTrackingState
 import expo.modules.kotlin.AppContext
 import expo.modules.kotlin.viewevent.EventDispatcher
 import expo.modules.kotlin.views.ExpoView
+import io.github.sceneview.ar.ARSceneView
+import io.github.sceneview.ar.node.AnchorNode
+import io.github.sceneview.node.ModelNode
+import io.github.sceneview.node.Node
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import java.lang.ref.WeakReference
 
-class ReactNativeArView(context: Context, appContext: AppContext) : ExpoView(context, appContext) {
-  // Creates and initializes an event dispatcher for the `onLoad` event.
-  // The name of the event is inferred from the value and needs to match the event name defined in the module.
-  private val onLoad by EventDispatcher()
+class ReactNativeArView(context: Context, appContext: AppContext) :
+    ExpoView(context, appContext), LifecycleOwner {
 
-  // Defines a WebView that will be used as the root subview.
-  internal val webView = WebView(context).apply {
-    layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
-    webViewClient = object : WebViewClient() {
-      override fun onPageFinished(view: WebView, url: String) {
-        // Sends an event to JavaScript. Triggers a callback defined on the view component in JavaScript.
-        onLoad(mapOf("url" to url))
-      }
+    companion object {
+        private const val TAG = "ReactNativeArView"
+        // Static weak reference for module access
+        var currentInstance: WeakReference<ReactNativeArView>? = null
     }
-  }
 
-  init {
-    // Adds the WebView to the view hierarchy.
-    addView(webView)
-  }
+    // Events
+    private val onTrackingStateChange by EventDispatcher()
+    private val onPlaneDetected by EventDispatcher()
+    private val onModelLoaded by EventDispatcher()
+    private val onModelPlaced by EventDispatcher()
+    private val onModelError by EventDispatcher()
+    private val onSceneChange by EventDispatcher()
+    private val onARError by EventDispatcher()
+
+    // Lifecycle
+    private val lifecycleRegistry = LifecycleRegistry(this)
+    override val lifecycle: Lifecycle get() = lifecycleRegistry
+
+    // Scene management
+    private val sceneStack = ArrayDeque<ARSceneState>()
+    private var currentModels: MutableList<ModelConfig> = mutableListOf()
+    private val placedAnchors: MutableList<AnchorNode> = mutableListOf()
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    // Pending models waiting for tap-to-place
+    private var pendingModelConfigs: MutableList<ModelConfig> = mutableListOf()
+    private var currentPendingIndex = 0
+
+    // Tracking
+    private var lastTrackingState: String = "unavailable"
+    private val detectedPlaneIds = mutableSetOf<String>()
+
+    // AR view
+    internal val arSceneView: ARSceneView
+
+    // Current frame reference for hit testing
+    private var currentFrame: Frame? = null
+
+    init {
+        currentInstance = WeakReference(this)
+        lifecycleRegistry.currentState = Lifecycle.State.CREATED
+
+        arSceneView = ARSceneView(
+            context = context,
+            sessionConfiguration = { session, config ->
+                config.depthMode = when (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
+                    true -> Config.DepthMode.AUTOMATIC
+                    else -> Config.DepthMode.DISABLED
+                }
+                config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
+                config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
+            },
+            onSessionUpdated = { _, frame ->
+                handleFrameUpdate(frame)
+            },
+            onTrackingFailureChanged = { reason ->
+                handleTrackingFailure(reason)
+            }
+        ).apply {
+            layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
+        }
+
+        addView(arSceneView)
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        lifecycleRegistry.currentState = Lifecycle.State.RESUMED
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
+        scope.cancel()
+        if (currentInstance?.get() === this) {
+            currentInstance = null
+        }
+    }
+
+    // --- Frame updates ---
+
+    private fun handleFrameUpdate(frame: Frame) {
+        currentFrame = frame
+
+        val camera = frame.camera
+        val newState = when (camera.trackingState) {
+            ARTrackingState.TRACKING -> "normal"
+            ARTrackingState.PAUSED -> "limited"
+            ARTrackingState.STOPPED -> "unavailable"
+        }
+        if (newState != lastTrackingState) {
+            lastTrackingState = newState
+            onTrackingStateChange(mapOf("state" to newState))
+        }
+
+        for (plane in frame.getUpdatedTrackables(Plane::class.java)) {
+            if (plane.trackingState == ARTrackingState.TRACKING) {
+                val planeId = plane.hashCode().toString()
+                if (planeId !in detectedPlaneIds) {
+                    detectedPlaneIds.add(planeId)
+                    val type = when (plane.type) {
+                        Plane.Type.HORIZONTAL_UPWARD_FACING -> "horizontal"
+                        Plane.Type.HORIZONTAL_DOWNWARD_FACING -> "horizontal"
+                        Plane.Type.VERTICAL -> "vertical"
+                        else -> "horizontal"
+                    }
+                    onPlaneDetected(mapOf("id" to planeId, "type" to type))
+                }
+            }
+        }
+    }
+
+    private fun handleTrackingFailure(reason: TrackingFailureReason?) {
+        if (reason == null || reason == TrackingFailureReason.NONE) return
+        val reasonStr = when (reason) {
+            TrackingFailureReason.BAD_STATE -> "bad_state"
+            TrackingFailureReason.INSUFFICIENT_LIGHT -> "insufficient_light"
+            TrackingFailureReason.EXCESSIVE_MOTION -> "excessive_motion"
+            TrackingFailureReason.INSUFFICIENT_FEATURES -> "insufficient_features"
+            TrackingFailureReason.CAMERA_UNAVAILABLE -> "camera_unavailable"
+            else -> "unknown"
+        }
+        onTrackingStateChange(mapOf("state" to "limited", "reason" to reasonStr))
+    }
+
+    // --- Tap to place ---
+
+    fun handleTapToPlace(event: MotionEvent) {
+        if (pendingModelConfigs.isEmpty() || currentPendingIndex >= pendingModelConfigs.size) return
+        val frame = currentFrame ?: return
+
+        val hitResults = frame.hitTest(event.x, event.y)
+        val validHit = hitResults.firstOrNull { hit ->
+            val trackable = hit.trackable
+            trackable is Plane && trackable.isPoseInPolygon(hit.hitPose) &&
+                trackable.trackingState == ARTrackingState.TRACKING
+        } ?: return
+
+        val anchor = validHit.createAnchor() ?: return
+        val modelConfig = pendingModelConfigs[currentPendingIndex]
+        currentPendingIndex++
+
+        loadAndPlaceModel(anchor, modelConfig)
+    }
+
+    private fun loadAndPlaceModel(anchor: com.google.ar.core.Anchor, config: ModelConfig) {
+        val anchorNode = AnchorNode(arSceneView.engine, anchor)
+        val modelId = config.id.ifEmpty { config.sourceUri.hashCode().toString() }
+
+        scope.launch {
+            try {
+                val modelInstance = arSceneView.modelLoader.loadModelInstance(config.sourceUri)
+
+                if (modelInstance != null) {
+                    val modelNode = ModelNode(
+                        modelInstance = modelInstance,
+                        scaleToUnits = config.scale
+                    ).apply {
+                        isEditable = config.gestureScale || config.gestureRotate
+                        isScaleEditable = config.gestureScale
+                        isRotationEditable = config.gestureRotate
+                        if (config.gestureScale) {
+                            editableScaleRange = config.gestureScaleMin..config.gestureScaleMax
+                        }
+                    }
+
+                    anchorNode.addChildNode(modelNode)
+                    arSceneView.addChildNode(anchorNode)
+                    placedAnchors.add(anchorNode)
+
+                    onModelLoaded(mapOf("modelId" to modelId))
+                    onModelPlaced(mapOf(
+                        "modelId" to modelId,
+                        "anchorId" to anchor.hashCode().toString()
+                    ))
+                } else {
+                    onModelError(mapOf(
+                        "modelId" to modelId,
+                        "code" to "MODEL_LOAD_FAILED",
+                        "message" to "Failed to load model from ${config.sourceUri}"
+                    ))
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load model", e)
+                onModelError(mapOf(
+                    "modelId" to modelId,
+                    "code" to "MODEL_LOAD_FAILED",
+                    "message" to (e.message ?: "Unknown error loading model")
+                ))
+            }
+        }
+    }
+
+    // --- Scene stack management ---
+
+    fun setModels(models: List<ModelConfig>) {
+        pendingModelConfigs = models.toMutableList()
+        currentPendingIndex = 0
+        currentModels = models.toMutableList()
+    }
+
+    fun pushScene(models: List<ModelConfig>) {
+        sceneStack.addLast(ARSceneState(
+            models = currentModels.toList(),
+            anchorNodes = placedAnchors.toList()
+        ))
+
+        for (node in placedAnchors) {
+            node.isVisible = false
+        }
+
+        placedAnchors.clear()
+        setModels(models)
+
+        onSceneChange(mapOf("action" to "push", "depth" to sceneStack.size))
+    }
+
+    fun popScene(): Boolean {
+        if (sceneStack.isEmpty()) return false
+
+        for (node in placedAnchors) {
+            arSceneView.removeChildNode(node)
+            node.destroy()
+        }
+        placedAnchors.clear()
+
+        val previous = sceneStack.removeLast()
+        currentModels = previous.models.toMutableList()
+        pendingModelConfigs = mutableListOf()
+        currentPendingIndex = 0
+
+        for (node in previous.anchorNodes) {
+            node.isVisible = true
+            placedAnchors.add(node)
+        }
+
+        onSceneChange(mapOf("action" to "pop", "depth" to sceneStack.size))
+        return true
+    }
+
+    fun replaceScene(models: List<ModelConfig>) {
+        for (node in placedAnchors) {
+            arSceneView.removeChildNode(node)
+            node.destroy()
+        }
+        placedAnchors.clear()
+        setModels(models)
+        onSceneChange(mapOf("action" to "replace", "depth" to sceneStack.size))
+    }
+
+    fun popToTop() {
+        if (sceneStack.isEmpty()) return
+
+        for (node in placedAnchors) {
+            arSceneView.removeChildNode(node)
+            node.destroy()
+        }
+        placedAnchors.clear()
+
+        while (sceneStack.size > 1) {
+            val state = sceneStack.removeLast()
+            for (node in state.anchorNodes) {
+                arSceneView.removeChildNode(node)
+                node.destroy()
+            }
+        }
+
+        val first = sceneStack.removeLast()
+        currentModels = first.models.toMutableList()
+        pendingModelConfigs = mutableListOf()
+        currentPendingIndex = 0
+
+        for (node in first.anchorNodes) {
+            node.isVisible = true
+            placedAnchors.add(node)
+        }
+
+        onSceneChange(mapOf("action" to "popToTop", "depth" to 0))
+    }
 }
