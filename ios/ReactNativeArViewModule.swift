@@ -1,48 +1,62 @@
 import ExpoModulesCore
 
 public class ReactNativeArViewModule: Module {
-  // Each module class must implement the definition function. The definition consists of components
-  // that describes the module's functionality and behavior.
-  // See https://docs.expo.dev/modules/module-api for more details about available components.
-  public func definition() -> ModuleDefinition {
-    // Sets the name of the module that JavaScript code will use to refer to the module. Takes a string as an argument.
-    // Can be inferred from module's class name, but it's recommended to set it explicitly for clarity.
-    // The module will be accessible from `requireNativeModule('ReactNativeArView')` in JavaScript.
-    Name("ReactNativeArView")
+    public func definition() -> ModuleDefinition {
+        Name("ReactNativeArView")
 
-    // Defines constant property on the module.
-    Constant("PI") {
-      Double.pi
-    }
+        Events(
+            "onTrackingStateChange",
+            "onPlaneDetected",
+            "onModelLoaded",
+            "onModelPlaced",
+            "onModelError",
+            "onSceneChange",
+            "onARError"
+        )
 
-    // Defines event names that the module can send to JavaScript.
-    Events("onChange")
-
-    // Defines a JavaScript synchronous function that runs the native code on the JavaScript thread.
-    Function("hello") {
-      return "Hello world! 👋"
-    }
-
-    // Defines a JavaScript function that always returns a Promise and whose native code
-    // is by default dispatched on the different thread than the JavaScript runtime runs on.
-    AsyncFunction("setValueAsync") { (value: String) in
-      // Send an event to JavaScript.
-      self.sendEvent("onChange", [
-        "value": value
-      ])
-    }
-
-    // Enables the module to be used as a native view. Definition components that are accepted as part of the
-    // view definition: Prop, Events.
-    View(ReactNativeArView.self) {
-      // Defines a setter for the `url` prop.
-      Prop("url") { (view: ReactNativeArView, url: URL) in
-        if view.webView.url != url {
-          view.webView.load(URLRequest(url: url))
+        AsyncFunction("pushScene") { (models: [[String: Any]]) in
+            let configs = models.map { ModelConfig.from($0) }
+            DispatchQueue.main.async {
+                Self.getView()?.pushScene(configs)
+            }
         }
-      }
 
-      Events("onLoad")
+        AsyncFunction("popScene") { () -> Bool in
+            return await withCheckedContinuation { continuation in
+                DispatchQueue.main.async {
+                    let result = Self.getView()?.popScene() ?? false
+                    continuation.resume(returning: result)
+                }
+            }
+        }
+
+        AsyncFunction("replaceScene") { (models: [[String: Any]]) in
+            let configs = models.map { ModelConfig.from($0) }
+            DispatchQueue.main.async {
+                Self.getView()?.replaceScene(configs)
+            }
+        }
+
+        AsyncFunction("popToTop") { () in
+            DispatchQueue.main.async {
+                Self.getView()?.popToTop()
+            }
+        }
+
+        View(ReactNativeArView.self) {
+            Events(
+                "onTrackingStateChange",
+                "onPlaneDetected",
+                "onModelLoaded",
+                "onModelPlaced",
+                "onModelError",
+                "onSceneChange",
+                "onARError"
+            )
+        }
     }
-  }
+
+    private static func getView() -> ReactNativeArView? {
+        return ReactNativeArView.currentInstance
+    }
 }
