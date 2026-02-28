@@ -142,8 +142,8 @@ class ReactNativeArView: ExpoView, ARSCNViewDelegate, ARSessionDelegate, UIGestu
 
         // Create translucent plane overlay
         let plane = SCNPlane(
-            width: CGFloat(planeAnchor.planeExtent.width),
-            height: CGFloat(planeAnchor.planeExtent.height)
+            width: CGFloat(planeAnchor.extent.x),
+            height: CGFloat(planeAnchor.extent.z)
         )
         let material = SCNMaterial()
         material.diffuse.contents = UIColor(white: 1.0, alpha: 0.3)
@@ -175,8 +175,8 @@ class ReactNativeArView: ExpoView, ARSCNViewDelegate, ARSessionDelegate, UIGestu
               let plane = planeNode.geometry as? SCNPlane else { return }
 
         // Update plane extent
-        plane.width = CGFloat(planeAnchor.planeExtent.width)
-        plane.height = CGFloat(planeAnchor.planeExtent.height)
+        plane.width = CGFloat(planeAnchor.extent.x)
+        plane.height = CGFloat(planeAnchor.extent.z)
     }
 
     func renderer(_ renderer: SCNSceneRenderer, didRemove node: SCNNode, for anchor: ARAnchor) {
