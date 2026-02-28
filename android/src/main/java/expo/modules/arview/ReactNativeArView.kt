@@ -17,6 +17,7 @@ import expo.modules.kotlin.views.ExpoView
 import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.node.AnchorNode
 import io.github.sceneview.node.ModelNode
+import io.github.sceneview.gesture.GestureDetector
 import io.github.sceneview.node.Node
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -71,27 +72,55 @@ class ReactNativeArView(context: Context, appContext: AppContext) :
         currentInstance = WeakReference(this)
         lifecycleRegistry.currentState = Lifecycle.State.CREATED
 
-        arSceneView = ARSceneView(
-            context = context,
-            sessionConfiguration = { session, config ->
-                config.depthMode = when (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
-                    true -> Config.DepthMode.AUTOMATIC
-                    else -> Config.DepthMode.DISABLED
+        arSceneView = try {
+            ARSceneView(
+                context = context,
+                sessionConfiguration = { session, config ->
+                    config.depthMode = when (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
+                        true -> Config.DepthMode.AUTOMATIC
+                        else -> Config.DepthMode.DISABLED
+                    }
+                    config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
+                    config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
+                },
+                onSessionCreationFailed = { exception ->
+                    Log.e(TAG, "ARCore session creation failed", exception)
+                    onARError(mapOf(
+                        "code" to "SESSION_CREATION_FAILED",
+                        "message" to (exception.message ?: "ARCore session creation failed")
+                    ))
+                },
+                onSessionUpdated = { _, frame ->
+                    handleFrameUpdate(frame)
+                },
+                onTrackingFailureChanged = { reason ->
+                    handleTrackingFailure(reason)
                 }
-                config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
-                config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
-            },
-            onSessionUpdated = { _, frame ->
-                handleFrameUpdate(frame)
-            },
-            onTrackingFailureChanged = { reason ->
-                handleTrackingFailure(reason)
+            ).apply {
+                layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
             }
-        ).apply {
-            layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to create ARSceneView", e)
+            onARError(mapOf(
+                "code" to "AR_VIEW_INIT_FAILED",
+                "message" to (e.message ?: "Failed to initialize AR view")
+            ))
+            // Create a minimal ARSceneView so the field is initialized
+            ARSceneView(context).apply {
+                layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
+            }
         }
 
         addView(arSceneView)
+
+        arSceneView.onGestureListener = object : GestureDetector.SimpleOnGestureListener() {
+            override fun onSingleTapConfirmed(e: MotionEvent, node: Node?): Boolean {
+                if (node == null) {
+                    handleTapToPlace(e)
+                }
+                return true
+            }
+        }
     }
 
     override fun onAttachedToWindow() {
@@ -167,7 +196,16 @@ class ReactNativeArView(context: Context, appContext: AppContext) :
                 trackable.trackingState == ARTrackingState.TRACKING
         } ?: return
 
-        val anchor = validHit.createAnchor() ?: return
+        val anchor = try {
+            validHit.createAnchor()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to create anchor", e)
+            onARError(mapOf(
+                "code" to "ANCHOR_CREATE_FAILED",
+                "message" to (e.message ?: "Failed to create anchor")
+            ))
+            return
+        }
         val modelConfig = pendingModelConfigs[currentPendingIndex]
         currentPendingIndex++
 
@@ -192,6 +230,13 @@ class ReactNativeArView(context: Context, appContext: AppContext) :
                         isRotationEditable = config.gestureRotate
                         if (config.gestureScale) {
                             editableScaleRange = config.gestureScaleMin..config.gestureScaleMax
+                        }
+                        if (config.rotation.any { it != 0f }) {
+                            rotation = dev.romainguy.kotlin.math.Float3(
+                                config.rotation[0],
+                                config.rotation[1],
+                                config.rotation[2]
+                            )
                         }
                     }
 

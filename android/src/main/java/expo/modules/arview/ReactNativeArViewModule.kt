@@ -1,9 +1,7 @@
 package expo.modules.arview
 
-import android.view.MotionEvent
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
-import io.github.sceneview.node.Node
 
 class ReactNativeArViewModule : Module() {
     override fun definition() = ModuleDefinition {
@@ -48,18 +46,7 @@ class ReactNativeArViewModule : Module() {
                 "onARError"
             )
 
-            OnViewDidUpdateProps { view: ReactNativeArView ->
-                // Set up tap gesture handling when the view is ready
-                view.arSceneView.onGestureListener =
-                    object : io.github.sceneview.gesture.GestureDetector.SimpleOnGestureListener() {
-                        override fun onSingleTapConfirmed(e: MotionEvent, node: Node?): Boolean {
-                            if (node == null) {
-                                view.handleTapToPlace(e)
-                            }
-                            return true
-                        }
-                    }
-            }
+            // Gesture listener is set up once in ReactNativeArView init block
         }
     }
 

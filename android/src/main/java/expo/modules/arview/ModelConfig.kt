@@ -20,9 +20,9 @@ data class ModelConfig(
                 scale = (map["scale"] as? Number)?.toFloat() ?: 1.0f,
                 rotation = (map["rotation"] as? List<*>)?.let { list ->
                     floatArrayOf(
-                        (list[0] as? Number)?.toFloat() ?: 0f,
-                        (list[1] as? Number)?.toFloat() ?: 0f,
-                        (list[2] as? Number)?.toFloat() ?: 0f
+                        (list.getOrNull(0) as? Number)?.toFloat() ?: 0f,
+                        (list.getOrNull(1) as? Number)?.toFloat() ?: 0f,
+                        (list.getOrNull(2) as? Number)?.toFloat() ?: 0f
                     )
                 } ?: floatArrayOf(0f, 0f, 0f),
                 gestureScale = map["gestureScale"] as? Boolean ?: false,
