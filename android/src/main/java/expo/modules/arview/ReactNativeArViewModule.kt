@@ -1,50 +1,69 @@
 package expo.modules.arview
 
+import android.view.MotionEvent
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
-import java.net.URL
+import io.github.sceneview.node.Node
 
 class ReactNativeArViewModule : Module() {
-  // Each module class must implement the definition function. The definition consists of components
-  // that describes the module's functionality and behavior.
-  // See https://docs.expo.dev/modules/module-api for more details about available components.
-  override fun definition() = ModuleDefinition {
-    // Sets the name of the module that JavaScript code will use to refer to the module. Takes a string as an argument.
-    // Can be inferred from module's class name, but it's recommended to set it explicitly for clarity.
-    // The module will be accessible from `requireNativeModule('ReactNativeArView')` in JavaScript.
-    Name("ReactNativeArView")
+    override fun definition() = ModuleDefinition {
+        Name("ReactNativeArView")
 
-    // Defines constant property on the module.
-    Constant("PI") {
-      Math.PI
+        Events(
+            "onTrackingStateChange",
+            "onPlaneDetected",
+            "onModelLoaded",
+            "onModelPlaced",
+            "onModelError",
+            "onSceneChange",
+            "onARError"
+        )
+
+        AsyncFunction("pushScene") { models: List<Map<String, Any?>> ->
+            val configs = models.map { ModelConfig.fromMap(it) }
+            getView()?.pushScene(configs)
+        }
+
+        AsyncFunction("popScene") {
+            getView()?.popScene() ?: false
+        }
+
+        AsyncFunction("replaceScene") { models: List<Map<String, Any?>> ->
+            val configs = models.map { ModelConfig.fromMap(it) }
+            getView()?.replaceScene(configs)
+        }
+
+        AsyncFunction("popToTop") {
+            getView()?.popToTop()
+        }
+
+        View(ReactNativeArView::class) {
+            Events(
+                "onTrackingStateChange",
+                "onPlaneDetected",
+                "onModelLoaded",
+                "onModelPlaced",
+                "onModelError",
+                "onSceneChange",
+                "onARError"
+            )
+
+            OnViewDidUpdateProps { view: ReactNativeArView ->
+                // Set up tap gesture handling when the view is ready
+                view.arSceneView.onGestureListener =
+                    object : io.github.sceneview.gesture.GestureDetector.SimpleOnGestureListener() {
+                        override fun onSingleTapConfirmed(e: MotionEvent, node: Node?): Boolean {
+                            if (node == null) {
+                                view.handleTapToPlace(e)
+                            }
+                            return true
+                        }
+                    }
+            }
+        }
     }
 
-    // Defines event names that the module can send to JavaScript.
-    Events("onChange")
-
-    // Defines a JavaScript synchronous function that runs the native code on the JavaScript thread.
-    Function("hello") {
-      "Hello world! 👋"
+    private fun getView(): ReactNativeArView? {
+        return ReactNativeArView.currentInstance?.get()
     }
-
-    // Defines a JavaScript function that always returns a Promise and whose native code
-    // is by default dispatched on the different thread than the JavaScript runtime runs on.
-    AsyncFunction("setValueAsync") { value: String ->
-      // Send an event to JavaScript.
-      sendEvent("onChange", mapOf(
-        "value" to value
-      ))
-    }
-
-    // Enables the module to be used as a native view. Definition components that are accepted as part of
-    // the view definition: Prop, Events.
-    View(ReactNativeArView::class) {
-      // Defines a setter for the `url` prop.
-      Prop("url") { view: ReactNativeArView, url: URL ->
-        view.webView.loadUrl(url.toString())
-      }
-      // Defines an event that the view can send to JavaScript.
-      Events("onLoad")
-    }
-  }
 }
