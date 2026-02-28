@@ -91,6 +91,7 @@ class ReactNativeArView(context: Context, appContext: AppContext) :
                 }
             ).apply {
                 layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
+                planeRenderer.isEnabled = true
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to create ARSceneView", e)
@@ -235,6 +236,9 @@ class ReactNativeArView(context: Context, appContext: AppContext) :
                     arSceneView.addChildNode(anchorNode)
                     placedAnchors.add(anchorNode)
 
+                    // Hide plane dots once a model is placed
+                    arSceneView.planeRenderer.isEnabled = false
+
                     onModelLoaded(mapOf("modelId" to modelId))
                     onModelPlaced(mapOf(
                         "modelId" to modelId,
@@ -264,6 +268,10 @@ class ReactNativeArView(context: Context, appContext: AppContext) :
         pendingModelConfigs = models.toMutableList()
         currentPendingIndex = 0
         currentModels = models.toMutableList()
+        // Re-enable plane renderer so user can see surfaces to tap
+        if (models.isNotEmpty()) {
+            arSceneView.planeRenderer.isEnabled = true
+        }
     }
 
     fun pushScene(models: List<ModelConfig>) {
