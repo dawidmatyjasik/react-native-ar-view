@@ -18,8 +18,8 @@ import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.node.AnchorNode
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.gesture.GestureDetector
-import io.github.sceneview.gesture.ScaleGestureDetector
 import io.github.sceneview.node.Node
+import android.view.ScaleGestureDetector as AndroidScaleDetector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -61,6 +61,9 @@ class ReactNativeArView(context: Context, appContext: AppContext) :
 
     // Map model nodes to their configs for dampened scale gestures
     private val nodeConfigMap = mutableMapOf<ModelNode, ModelConfig>()
+
+    // Currently active model node for scale gesture
+    private var activeScaleNode: ModelNode? = null
 
     // Tracking
     private var lastTrackingState: String = "unavailable"
@@ -114,29 +117,39 @@ class ReactNativeArView(context: Context, appContext: AppContext) :
         arSceneView.onGestureListener = object : GestureDetector.SimpleOnGestureListener() {
             override fun onSingleTapConfirmed(e: MotionEvent, node: Node?) {
                 if (node == null) {
+                    activeScaleNode = null
                     handleTapToPlace(e)
+                } else {
+                    activeScaleNode = (node as? ModelNode) ?: (node.parent as? ModelNode)
                 }
             }
+        }
+    }
 
-            override fun onScale(detector: ScaleGestureDetector, e: MotionEvent, node: Node?) {
-                val modelNode = (node as? ModelNode)
-                    ?: (node?.parent as? ModelNode)
-                    ?: return
-                val config = nodeConfigMap[modelNode] ?: return
-                if (!config.gestureScale) return
+    // Our own scale detector — bypasses SceneView's built-in scale entirely
+    private val scaleDetector = AndroidScaleDetector(context,
+        object : AndroidScaleDetector.SimpleOnScaleGestureListener() {
+            override fun onScale(detector: AndroidScaleDetector): Boolean {
+                val node = activeScaleNode ?: return false
+                val config = nodeConfigMap[node] ?: return false
+                if (!config.gestureScale) return false
 
                 val rawFactor = detector.scaleFactor
                 val sensitivity = config.gestureScaleSensitivity
-                // SceneView already applied rawFactor — undo it, apply dampened version
-                val undoFactor = 1f / rawFactor
                 val dampenedFactor = 1f + (rawFactor - 1f) * sensitivity
 
-                val currentScale = modelNode.scale.x
-                val newScale = (currentScale * undoFactor * dampenedFactor)
+                val currentScale = node.scale.x
+                val newScale = (currentScale * dampenedFactor)
                     .coerceIn(config.gestureScaleMin..config.gestureScaleMax)
-                modelNode.scale = dev.romainguy.kotlin.math.Float3(newScale, newScale, newScale)
+                node.scale = dev.romainguy.kotlin.math.Float3(newScale, newScale, newScale)
+                return true
             }
         }
+    )
+
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        scaleDetector.onTouchEvent(event)
+        return super.dispatchTouchEvent(event)
     }
 
     override fun onAttachedToWindow() {
@@ -240,13 +253,10 @@ class ReactNativeArView(context: Context, appContext: AppContext) :
                         modelInstance = modelInstance,
                         scaleToUnits = config.scale
                     ).apply {
-                        isEditable = config.gestureScale || config.gestureRotate
-                        isScaleEditable = config.gestureScale
+                        // Scale handled by our own ScaleGestureDetector with dampening
+                        isEditable = config.gestureRotate
+                        isScaleEditable = false
                         isRotationEditable = config.gestureRotate
-                        if (config.gestureScale) {
-                            // Wide range — actual clamping done in onScale with dampening
-                            editableScaleRange = 0.001f..1000f
-                        }
                         if (config.rotation.any { it != 0f }) {
                             rotation = dev.romainguy.kotlin.math.Float3(
                                 config.rotation[0],
@@ -257,6 +267,7 @@ class ReactNativeArView(context: Context, appContext: AppContext) :
                     }
 
                     nodeConfigMap[modelNode] = config
+                    activeScaleNode = modelNode
                     anchorNode.addChildNode(modelNode)
                     arSceneView.addChildNode(anchorNode)
                     placedAnchors.add(anchorNode)

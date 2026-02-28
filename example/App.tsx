@@ -15,7 +15,6 @@ function MainScene({ arSceneNavigator }: ARSceneProps) {
           scale: true,
           rotate: true,
           scaleRange: [0.2, 2.0],
-          scaleSensitivity: 0.1,
         }}
       />
 

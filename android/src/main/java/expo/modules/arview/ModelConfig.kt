@@ -10,7 +10,7 @@ data class ModelConfig(
     val gestureRotate: Boolean = false,
     val gestureScaleMin: Float = 0.1f,
     val gestureScaleMax: Float = 10.0f,
-    val gestureScaleSensitivity: Float = 0.3f
+    val gestureScaleSensitivity: Float = 1.0f
 ) {
     companion object {
         fun fromMap(map: Map<String, Any?>): ModelConfig {
@@ -30,7 +30,7 @@ data class ModelConfig(
                 gestureRotate = map["gestureRotate"] as? Boolean ?: false,
                 gestureScaleMin = (map["gestureScaleMin"] as? Number)?.toFloat() ?: 0.1f,
                 gestureScaleMax = (map["gestureScaleMax"] as? Number)?.toFloat() ?: 10.0f,
-                gestureScaleSensitivity = (map["gestureScaleSensitivity"] as? Number)?.toFloat() ?: 0.3f
+                gestureScaleSensitivity = (map["gestureScaleSensitivity"] as? Number)?.toFloat() ?: 1.0f
             )
         }
     }
