@@ -107,6 +107,14 @@ class ReactNativeArView: ExpoView, ARSCNViewDelegate, ARSessionDelegate, UIGestu
     }
 
     private func startARSession() {
+        guard ARWorldTrackingConfiguration.isSupported else {
+            onARError([
+                "code": "AR_NOT_SUPPORTED",
+                "message": "ARWorldTrackingConfiguration is not supported on this device"
+            ])
+            return
+        }
+
         let configuration = ARWorldTrackingConfiguration()
         configuration.planeDetection = [.horizontal, .vertical]
         configuration.environmentTexturing = .automatic
@@ -391,9 +399,11 @@ class ReactNativeArView: ExpoView, ARSCNViewDelegate, ARSessionDelegate, UIGestu
     private func downloadFile(from remoteURL: URL) async throws -> URL {
         let (tempURL, response) = try await URLSession.shared.download(from: remoteURL)
 
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200...299).contains(httpResponse.statusCode) else {
-            throw ARViewError.downloadFailed(remoteURL.absoluteString)
+        let httpResponse = response as? HTTPURLResponse
+        guard let statusCode = httpResponse?.statusCode,
+              (200...299).contains(statusCode) else {
+            let code = httpResponse?.statusCode ?? 0
+            throw ARViewError.downloadFailed("\(remoteURL.absoluteString) (HTTP \(code))")
         }
 
         // Move to a temp location with the original file extension
@@ -409,18 +419,21 @@ class ReactNativeArView: ExpoView, ARSCNViewDelegate, ARSessionDelegate, UIGestu
     /// Load a GLTFAsset from a local file URL using GLTFKit2
     private func loadGLTFAsset(from url: URL) async throws -> GLTFAsset {
         return try await withCheckedThrowingContinuation { continuation in
-            GLTFAsset.load(with: url, options: [:]) { (progress, status, asset, error, _) in
+            var hasResumed = false
+            GLTFAsset.load(with: url, options: [:]) { (_, status, asset, error, _) in
+                guard !hasResumed else { return }
                 switch status {
                 case .complete:
+                    hasResumed = true
                     if let asset = asset {
                         continuation.resume(returning: asset)
                     } else {
                         continuation.resume(throwing: error ?? ARViewError.modelLoadFailed("Unknown error"))
                     }
                 case .error:
+                    hasResumed = true
                     continuation.resume(throwing: error ?? ARViewError.modelLoadFailed("GLTF load error"))
                 default:
-                    // Progress update, ignore
                     break
                 }
             }

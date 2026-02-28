@@ -16,8 +16,11 @@ public class ReactNativeArViewModule: Module {
 
         AsyncFunction("pushScene") { (models: [[String: Any]]) in
             let configs = models.map { ModelConfig.from($0) }
-            DispatchQueue.main.async {
-                Self.getView()?.pushScene(configs)
+            await withCheckedContinuation { continuation in
+                DispatchQueue.main.async {
+                    Self.getView()?.pushScene(configs)
+                    continuation.resume()
+                }
             }
         }
 
@@ -32,14 +35,20 @@ public class ReactNativeArViewModule: Module {
 
         AsyncFunction("replaceScene") { (models: [[String: Any]]) in
             let configs = models.map { ModelConfig.from($0) }
-            DispatchQueue.main.async {
-                Self.getView()?.replaceScene(configs)
+            await withCheckedContinuation { continuation in
+                DispatchQueue.main.async {
+                    Self.getView()?.replaceScene(configs)
+                    continuation.resume()
+                }
             }
         }
 
         AsyncFunction("popToTop") { () in
-            DispatchQueue.main.async {
-                Self.getView()?.popToTop()
+            await withCheckedContinuation { continuation in
+                DispatchQueue.main.async {
+                    Self.getView()?.popToTop()
+                    continuation.resume()
+                }
             }
         }
 
