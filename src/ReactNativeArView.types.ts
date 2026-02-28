@@ -18,9 +18,6 @@ export type ARModelProps = {
   scale?: number;
   rotation?: [number, number, number];
   gestures?: GestureConfig;
-  onLoaded?: () => void;
-  onPlaced?: (anchor: { id: string }) => void;
-  onError?: (error: { code: string; message: string }) => void;
 };
 
 // --- Scene types ---

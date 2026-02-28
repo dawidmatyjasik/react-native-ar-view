@@ -1,6 +1,7 @@
 import * as React from 'react';
 
 export type ModelRegistration = {
+  id: string;
   sourceUri: string;
   placement: string;
   scale: number;
