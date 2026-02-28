@@ -18,6 +18,7 @@ import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.node.AnchorNode
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.gesture.GestureDetector
+import io.github.sceneview.gesture.ScaleGestureDetector
 import io.github.sceneview.node.Node
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -57,6 +58,9 @@ class ReactNativeArView(context: Context, appContext: AppContext) :
     // Pending models waiting for tap-to-place
     private var pendingModelConfigs: MutableList<ModelConfig> = mutableListOf()
     private var currentPendingIndex = 0
+
+    // Map model nodes to their configs for dampened scale gestures
+    private val nodeConfigMap = mutableMapOf<ModelNode, ModelConfig>()
 
     // Tracking
     private var lastTrackingState: String = "unavailable"
@@ -112,6 +116,25 @@ class ReactNativeArView(context: Context, appContext: AppContext) :
                 if (node == null) {
                     handleTapToPlace(e)
                 }
+            }
+
+            override fun onScale(detector: ScaleGestureDetector, e: MotionEvent, node: Node?) {
+                val modelNode = (node as? ModelNode)
+                    ?: (node?.parent as? ModelNode)
+                    ?: return
+                val config = nodeConfigMap[modelNode] ?: return
+                if (!config.gestureScale) return
+
+                val rawFactor = detector.scaleFactor
+                val sensitivity = config.gestureScaleSensitivity
+                // SceneView already applied rawFactor — undo it, apply dampened version
+                val undoFactor = 1f / rawFactor
+                val dampenedFactor = 1f + (rawFactor - 1f) * sensitivity
+
+                val currentScale = modelNode.scale.x
+                val newScale = (currentScale * undoFactor * dampenedFactor)
+                    .coerceIn(config.gestureScaleMin..config.gestureScaleMax)
+                modelNode.scale = dev.romainguy.kotlin.math.Float3(newScale, newScale, newScale)
             }
         }
     }
@@ -221,7 +244,8 @@ class ReactNativeArView(context: Context, appContext: AppContext) :
                         isScaleEditable = config.gestureScale
                         isRotationEditable = config.gestureRotate
                         if (config.gestureScale) {
-                            editableScaleRange = config.gestureScaleMin..config.gestureScaleMax
+                            // Wide range — actual clamping done in onScale with dampening
+                            editableScaleRange = 0.001f..1000f
                         }
                         if (config.rotation.any { it != 0f }) {
                             rotation = dev.romainguy.kotlin.math.Float3(
@@ -232,6 +256,7 @@ class ReactNativeArView(context: Context, appContext: AppContext) :
                         }
                     }
 
+                    nodeConfigMap[modelNode] = config
                     anchorNode.addChildNode(modelNode)
                     arSceneView.addChildNode(anchorNode)
                     placedAnchors.add(anchorNode)
@@ -259,6 +284,12 @@ class ReactNativeArView(context: Context, appContext: AppContext) :
                     "message" to (e.message ?: "Unknown error loading model")
                 ))
             }
+        }
+    }
+
+    private fun cleanupAnchorNodeConfigs(anchorNode: AnchorNode) {
+        for (child in anchorNode.childNodes) {
+            (child as? ModelNode)?.let { nodeConfigMap.remove(it) }
         }
     }
 
@@ -294,6 +325,7 @@ class ReactNativeArView(context: Context, appContext: AppContext) :
         if (sceneStack.isEmpty()) return false
 
         for (node in placedAnchors) {
+            cleanupAnchorNodeConfigs(node)
             arSceneView.removeChildNode(node)
             node.destroy()
         }
@@ -315,6 +347,7 @@ class ReactNativeArView(context: Context, appContext: AppContext) :
 
     fun replaceScene(models: List<ModelConfig>) {
         for (node in placedAnchors) {
+            cleanupAnchorNodeConfigs(node)
             arSceneView.removeChildNode(node)
             node.destroy()
         }
@@ -327,6 +360,7 @@ class ReactNativeArView(context: Context, appContext: AppContext) :
         if (sceneStack.isEmpty()) return
 
         for (node in placedAnchors) {
+            cleanupAnchorNodeConfigs(node)
             arSceneView.removeChildNode(node)
             node.destroy()
         }
@@ -335,6 +369,7 @@ class ReactNativeArView(context: Context, appContext: AppContext) :
         while (sceneStack.size > 1) {
             val state = sceneStack.removeLast()
             for (node in state.anchorNodes) {
+                cleanupAnchorNodeConfigs(node)
                 arSceneView.removeChildNode(node)
                 node.destroy()
             }

@@ -10,6 +10,7 @@ export type ModelRegistration = {
   gestureRotate: boolean;
   gestureScaleMin: number;
   gestureScaleMax: number;
+  gestureScaleSensitivity: number;
 };
 
 type ARSceneContextType = {

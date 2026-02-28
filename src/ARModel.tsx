@@ -19,6 +19,7 @@ export default function ARModel(props: ARModelProps) {
   const gestureRotate = props.gestures?.rotate ?? false;
   const gestureScaleMin = props.gestures?.scaleRange?.[0] ?? 0.1;
   const gestureScaleMax = props.gestures?.scaleRange?.[1] ?? 10.0;
+  const gestureScaleSensitivity = props.gestures?.scaleSensitivity ?? 0.3;
 
   React.useEffect(() => {
     if (!registration) return;
@@ -33,6 +34,7 @@ export default function ARModel(props: ARModelProps) {
       gestureRotate,
       gestureScaleMin,
       gestureScaleMax,
+      gestureScaleSensitivity,
     });
 
     return () => {
@@ -51,6 +53,7 @@ export default function ARModel(props: ARModelProps) {
     gestureRotate,
     gestureScaleMin,
     gestureScaleMax,
+    gestureScaleSensitivity,
   ]);
 
   return null;

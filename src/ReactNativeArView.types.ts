@@ -10,6 +10,7 @@ export type GestureConfig = {
   scale?: boolean;
   rotate?: boolean;
   scaleRange?: [number, number];
+  scaleSensitivity?: number; // 0-1, dampens pinch gesture speed (default 0.3)
 };
 
 export type ARModelProps = {
