@@ -3,10 +3,10 @@ import { NativeModule, requireNativeModule } from 'expo';
 import { ReactNativeArViewModuleEvents } from './ReactNativeArView.types';
 
 declare class ReactNativeArViewModule extends NativeModule<ReactNativeArViewModuleEvents> {
-  PI: number;
-  hello(): string;
-  setValueAsync(value: string): Promise<void>;
+  pushScene(models: Array<Record<string, unknown>>): Promise<void>;
+  popScene(): Promise<void>;
+  replaceScene(models: Array<Record<string, unknown>>): Promise<void>;
+  popToTop(): Promise<void>;
 }
 
-// This call loads the native module object from the JSI.
 export default requireNativeModule<ReactNativeArViewModule>('ReactNativeArView');
