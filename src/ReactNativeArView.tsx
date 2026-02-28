@@ -1,11 +1,12 @@
 import { requireNativeView } from 'expo';
 import * as React from 'react';
+import type { StyleProp, ViewStyle } from 'react-native';
 
-import { ReactNativeArViewProps } from './ReactNativeArView.types';
+type NativeARViewProps = {
+  style?: StyleProp<ViewStyle>;
+};
 
-const NativeView: React.ComponentType<ReactNativeArViewProps> =
+const NativeARView: React.ComponentType<NativeARViewProps> =
   requireNativeView('ReactNativeArView');
 
-export default function ReactNativeArView(props: ReactNativeArViewProps) {
-  return <NativeView {...props} />;
-}
+export default NativeARView;
