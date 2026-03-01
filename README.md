@@ -15,9 +15,9 @@ AR view component for React Native and Expo. Place, scale, rotate, and drag 3D m
 | -------- | ------- | ------------ |
 | iOS      | 15.0+   | ARKit        |
 | Android  | API 24+ | ARCore       |
-| Expo     | SDK 52+ | —            |
+| Expo     | SDK 52+ | -            |
 
-**Physical device required** — AR does not work in simulators or emulators.
+**Physical device required** - AR does not work in simulators or emulators.
 
 ## Installation
 
@@ -110,11 +110,11 @@ The root component that manages the AR session, camera view, and scene stack.
 | Prop                    | Type                                                      | Default                     | Description                            |
 | ----------------------- | --------------------------------------------------------- | --------------------------- | -------------------------------------- |
 | `initialScene`          | `SceneConfig`                                             | _required_                  | The first scene to render              |
-| `style`                 | `ViewStyle`                                               | —                           | Style applied to the AR view container |
+| `style`                 | `ViewStyle`                                               | -                           | Style applied to the AR view container |
 | `planeDetection`        | `'horizontal' \| 'vertical' \| 'horizontal_and_vertical'` | `'horizontal_and_vertical'` | Which plane types to detect            |
-| `onTrackingStateChange` | `(state: TrackingState) => void`                          | —                           | Called when AR tracking state changes  |
-| `onPlaneDetected`       | `(plane: PlaneInfo) => void`                              | —                           | Called when a new plane is detected    |
-| `onError`               | `(error: { code, message }) => void`                      | —                           | Called on AR errors                    |
+| `onTrackingStateChange` | `(state: TrackingState) => void`                          | -                           | Called when AR tracking state changes  |
+| `onPlaneDetected`       | `(plane: PlaneInfo) => void`                              | -                           | Called when a new plane is detected    |
+| `onError`               | `(error: { code, message }) => void`                      | -                           | Called on AR errors                    |
 
 ### `<ARModel>`
 
@@ -141,7 +141,7 @@ Declares a 3D model to be placed in the AR scene. Must be rendered inside a scen
 | `placement` | `'tap'`           | `'tap'`     | Placement strategy                         |
 | `scale`     | `number`          | `1.0`       | Initial model scale                        |
 | `rotation`  | `[x, y, z]`       | `[0, 0, 0]` | Initial rotation in radians (euler angles) |
-| `gestures`  | `GestureConfig`   | —           | Enable interactive gestures                |
+| `gestures`  | `GestureConfig`   | -           | Enable interactive gestures                |
 
 #### `GestureConfig`
 

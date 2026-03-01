@@ -144,7 +144,7 @@ class ReactNativeArView(context: Context, appContext: AppContext) :
         }
     }
 
-    // Our own scale detector — bypasses SceneView's built-in scale entirely
+    // Our own scale detector - bypasses SceneView's built-in scale entirely
     private val scaleDetector = AndroidScaleDetector(context,
         object : AndroidScaleDetector.SimpleOnScaleGestureListener() {
             override fun onScale(detector: AndroidScaleDetector): Boolean {

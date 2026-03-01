@@ -1,7 +1,7 @@
 {
   "name": "react-native-ar-view",
-  "version": "0.1.0",
-  "description": "AR view component for React Native and Expo — place, scale, rotate, and drag 3D models on real-world surfaces using ARKit (iOS) and ARCore (Android)",
+  "version": "0.1.1",
+  "description": "AR view component for React Native and Expo - place, scale, rotate, and drag 3D models on real-world surfaces using ARKit (iOS) and ARCore (Android)",
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "scripts": {
