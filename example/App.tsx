@@ -79,6 +79,7 @@ export default function App() {
       style={styles.container}
       onTrackingStateChange={(state) => console.log("Tracking:", state)}
       onPlaneDetected={(plane) => console.log("Plane:", plane.type)}
+      planeDetection="horizontal"
       onError={(err) => Alert.alert("AR Error", `${err.code}: ${err.message}`)}
     />
   );

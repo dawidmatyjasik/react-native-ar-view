@@ -17,6 +17,7 @@ type NavigationAction = SceneChangeEvent['action'];
 export default function ARNavigator({
   initialScene,
   style,
+  planeDetection = 'horizontal_and_vertical',
   onTrackingStateChange,
   onPlaneDetected,
   onError,
@@ -134,7 +135,7 @@ export default function ARNavigator({
 
   return (
     <ARNavigatorProvider navigator={navigator} tracking={tracking} sceneProps={currentScene.passProps}>
-      <NativeARView style={style} />
+      <NativeARView style={style} planeDetection={planeDetection} />
       <ARSceneProvider key={sceneKey} onModelsChanged={handleModelsChanged}>
         <SceneComponent />
       </ARSceneProvider>

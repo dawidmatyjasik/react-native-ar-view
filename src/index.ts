@@ -10,4 +10,5 @@ export type {
   GestureConfig,
   TrackingState,
   PlaneInfo,
+  PlaneDetection,
 } from './ReactNativeArView.types';

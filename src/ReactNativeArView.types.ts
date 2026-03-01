@@ -44,9 +44,12 @@ export type PlaneInfo = {
   type: 'horizontal' | 'vertical';
 };
 
+export type PlaneDetection = 'horizontal' | 'vertical' | 'horizontal_and_vertical';
+
 export type ARNavigatorProps = {
   initialScene: SceneConfig;
   style?: StyleProp<ViewStyle>;
+  planeDetection?: PlaneDetection;
   onTrackingStateChange?: (state: TrackingState) => void;
   onPlaneDetected?: (plane: PlaneInfo) => void;
   onError?: (error: { code: string; message: string }) => void;

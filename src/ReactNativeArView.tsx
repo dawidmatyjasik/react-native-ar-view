@@ -4,6 +4,7 @@ import type { StyleProp, ViewStyle } from 'react-native';
 
 type NativeARViewProps = {
   style?: StyleProp<ViewStyle>;
+  planeDetection?: string;
 };
 
 const NativeARView: React.ComponentType<NativeARViewProps> =

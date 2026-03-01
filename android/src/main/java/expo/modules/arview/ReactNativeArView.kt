@@ -69,11 +69,29 @@ class ReactNativeArView(context: Context, appContext: AppContext) :
     private var lastTrackingState: String = "unavailable"
     private val detectedPlaneIds = mutableSetOf<String>()
 
+    // Plane detection mode
+    private var planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
+
     // AR view
     internal val arSceneView: ARSceneView
 
     // Current frame reference for hit testing
     private var currentFrame: Frame? = null
+
+    fun setPlaneDetection(mode: String) {
+        planeFindingMode = when (mode) {
+            "horizontal" -> Config.PlaneFindingMode.HORIZONTAL
+            "vertical" -> Config.PlaneFindingMode.VERTICAL
+            else -> Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
+        }
+        // Reconfigure the session if already running
+        arSceneView.session?.let { session ->
+            val config = session.config.apply {
+                planeFindingMode = this@ReactNativeArView.planeFindingMode
+            }
+            session.configure(config)
+        }
+    }
 
     init {
         currentInstance = WeakReference(this)
@@ -88,7 +106,7 @@ class ReactNativeArView(context: Context, appContext: AppContext) :
                         else -> Config.DepthMode.DISABLED
                     }
                     config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
-                    config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
+                    config.planeFindingMode = planeFindingMode
                 },
                 onSessionUpdated = { _, frame ->
                     handleFrameUpdate(frame)
