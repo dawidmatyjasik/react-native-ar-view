@@ -61,6 +61,10 @@ class ReactNativeArViewModule : Module() {
                 "onARError"
             )
 
+            Prop("planeDetection") { view: ReactNativeArView, value: String? ->
+                view.setPlaneDetection(value ?: "horizontal_and_vertical")
+            }
+
             // Gesture listener is set up once in ReactNativeArView init block
         }
     }

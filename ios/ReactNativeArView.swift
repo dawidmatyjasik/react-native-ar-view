@@ -50,6 +50,7 @@ class ReactNativeArView: ExpoView, ARSCNViewDelegate, ARSessionDelegate, UIGestu
     // MARK: - Layout flag
 
     private var hasStartedSession = false
+    private var planeDetectionMode: ARWorldTrackingConfiguration.PlaneDetection = [.horizontal, .vertical]
 
     // MARK: - Plane overlay nodes
 
@@ -115,6 +116,21 @@ class ReactNativeArView: ExpoView, ARSCNViewDelegate, ARSessionDelegate, UIGestu
         }
     }
 
+    func setPlaneDetection(_ mode: String) {
+        switch mode {
+        case "horizontal":
+            planeDetectionMode = [.horizontal]
+        case "vertical":
+            planeDetectionMode = [.vertical]
+        default:
+            planeDetectionMode = [.horizontal, .vertical]
+        }
+        // Restart session if already running so the new mode takes effect
+        if hasStartedSession {
+            startARSession()
+        }
+    }
+
     private func startARSession() {
         guard ARWorldTrackingConfiguration.isSupported else {
             onARError([
@@ -125,7 +141,7 @@ class ReactNativeArView: ExpoView, ARSCNViewDelegate, ARSessionDelegate, UIGestu
         }
 
         let configuration = ARWorldTrackingConfiguration()
-        configuration.planeDetection = [.horizontal, .vertical]
+        configuration.planeDetection = planeDetectionMode
         configuration.environmentTexturing = .automatic
 
         // Enable scene depth if LiDAR is available

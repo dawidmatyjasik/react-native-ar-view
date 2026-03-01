@@ -62,6 +62,10 @@ public class ReactNativeArViewModule: Module {
                 "onSceneChange",
                 "onARError"
             )
+
+            Prop("planeDetection") { (view: ReactNativeArView, value: String?) in
+                view.setPlaneDetection(value ?? "horizontal_and_vertical")
+            }
         }
     }
 
