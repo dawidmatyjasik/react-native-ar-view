@@ -86,15 +86,20 @@ class ReactNativeArView: ExpoView, ARSCNViewDelegate, ARSessionDelegate, UIGestu
         arSceneView.addGestureRecognizer(rotationGesture)
 
         let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
+        panGesture.maximumNumberOfTouches = 1
         panGesture.delegate = self
         arSceneView.addGestureRecognizer(panGesture)
     }
 
-    // Allow simultaneous gesture recognition (pinch + rotation)
+    // Allow simultaneous gesture recognition for pinch + rotation, but not pan with either
     func gestureRecognizer(
         _ gestureRecognizer: UIGestureRecognizer,
         shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
     ) -> Bool {
+        // Don't allow pan to run simultaneously with pinch or rotation
+        if gestureRecognizer is UIPanGestureRecognizer || otherGestureRecognizer is UIPanGestureRecognizer {
+            return false
+        }
         return true
     }
 
@@ -150,11 +155,15 @@ class ReactNativeArView: ExpoView, ARSCNViewDelegate, ARSessionDelegate, UIGestu
             height: CGFloat(planeAnchor.extent.z)
         )
         let material = SCNMaterial()
-        material.diffuse.contents = UIColor(white: 1.0, alpha: 0.3)
+        material.diffuse.contents = UIColor(white: 0.6, alpha: 0.75)
         material.isDoubleSided = true
+        material.lightingModel = .constant
+        material.writesToDepthBuffer = false
+        material.readsFromDepthBuffer = false
         plane.materials = [material]
 
         let planeNode = SCNNode(geometry: plane)
+        planeNode.renderingOrder = 100
         // SCNPlane is vertical by default, rotate to be horizontal
         planeNode.eulerAngles.x = -.pi / 2
         planeNode.isHidden = hasPlacedFirstModel
