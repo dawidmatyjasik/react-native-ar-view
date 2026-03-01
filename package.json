@@ -1,7 +1,7 @@
 {
   "name": "react-native-ar-view",
   "version": "0.1.0",
-  "description": "React Native Ar View",
+  "description": "AR view component for React Native and Expo — place, scale, rotate, and drag 3D models on real-world surfaces using ARKit (iOS) and ARCore (Android)",
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "scripts": {
@@ -18,8 +18,15 @@
   "keywords": [
     "react-native",
     "expo",
-    "react-native-ar-view",
-    "ReactNativeArView"
+    "augmented-reality",
+    "ar",
+    "arkit",
+    "arcore",
+    "3d",
+    "gltf",
+    "glb",
+    "scenekit",
+    "sceneview"
   ],
   "repository": "https://github.com/dawidmatyjasik/react-native-ar-view",
   "bugs": {

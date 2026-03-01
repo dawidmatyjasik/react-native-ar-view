@@ -13,7 +13,11 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "expo.modules.arview.example"
+      "bundleIdentifier": "expo.modules.arview.example",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app uses the camera for augmented reality experiences.",
+        "UIRequiredDeviceCapabilities": ["arm64", "arkit"]
+      }
     },
     "android": {
       "adaptiveIcon": {
