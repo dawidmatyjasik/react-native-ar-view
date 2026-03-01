@@ -84,6 +84,10 @@ class ReactNativeArView: ExpoView, ARSCNViewDelegate, ARSessionDelegate, UIGestu
         let rotationGesture = UIRotationGestureRecognizer(target: self, action: #selector(handleRotation(_:)))
         rotationGesture.delegate = self
         arSceneView.addGestureRecognizer(rotationGesture)
+
+        let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
+        panGesture.delegate = self
+        arSceneView.addGestureRecognizer(panGesture)
     }
 
     // Allow simultaneous gesture recognition (pinch + rotation)
@@ -473,6 +477,42 @@ class ReactNativeArView: ExpoView, ARSCNViewDelegate, ARSessionDelegate, UIGestu
         if gesture.state == .changed {
             node.eulerAngles.y -= Float(gesture.rotation)
             gesture.rotation = 0
+        }
+    }
+
+    // MARK: - Gesture: Pan to Drag
+
+    @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
+        guard let node = activeGestureNode,
+              nodeConfigMap[node] != nil else { return }
+
+        let location = gesture.location(in: arSceneView)
+
+        guard let query = arSceneView.raycastQuery(
+            from: location,
+            allowing: .existingPlaneGeometry,
+            alignment: .any
+        ) else { return }
+
+        let results = arSceneView.session.raycast(query)
+        guard let result = results.first else { return }
+
+        switch gesture.state {
+        case .changed, .began:
+            // Get the hit world position
+            let hitWorldPosition = SCNVector3(
+                result.worldTransform.columns.3.x,
+                result.worldTransform.columns.3.y,
+                result.worldTransform.columns.3.z
+            )
+
+            // Convert world position to local position relative to the anchor (parent) node
+            if let parentNode = node.parent {
+                let localPos = parentNode.convertPosition(hitWorldPosition, from: nil)
+                node.position = localPos
+            }
+        default:
+            break
         }
     }
 
